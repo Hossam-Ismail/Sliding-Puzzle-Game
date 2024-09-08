@@ -8,7 +8,7 @@ const port = 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-const directionsX = [1, 1, 0, 0]; // Movement directions for rows
+const directionsX = [1, -1, 0, 0]; // Movement directions for rows
 const directionsY = [0, 0, 1, -1]; // Movement directions for columns
 const solvedPuzzle = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]; // Target solved state
 
@@ -107,7 +107,7 @@ app.post('/solve-puzzle', (req, res) => {
 
     // Return the result as a response
     if (result.solved) {
-        res.json({ message: 'Puzzle solved!', moves: result.moves });
+        res.json({ message: 'Puzzle solvedXD!', moves: result.moves });
     } else {
         res.json({ message: 'No solution found.' });
     }
