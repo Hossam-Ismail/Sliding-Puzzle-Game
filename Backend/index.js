@@ -5,12 +5,7 @@ const cors = require('cors');
 const app = express();
 const port = 5000;
 
-app.use(cors(
-    {
-        origin: 'https://slider-puzzle-game.vercel.app'
-    }
-));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
 
 const directionsX = [1, -1, 0, 0]; // Movement directions for rows
