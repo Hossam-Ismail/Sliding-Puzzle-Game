@@ -35,7 +35,7 @@ function generateNeighbors(currentPuzzle, emptyTilePos) {
             const newPuzzle = currentPuzzle.map(row => row.slice()); // Deep copy of the puzzle
             // Swap the empty tile (0) with the neighbor
             [newPuzzle[emptyRow][emptyCol], newPuzzle[newX][newY]] = [newPuzzle[newX][newY], newPuzzle[emptyRow][emptyCol]];
-            neighbors.push({ puzzle: newPuzzle, move: [newX, newY], newEmptyPos: [newX, newY] });
+            neighbors.push({ puzzle: newPuzzle, move: [newY, newX], newEmptyPos: [newX, newY] });
         }
     }
 
