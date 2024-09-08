@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 const directionsX = [1, -1, 0, 0]; // Movement directions for rows
 const directionsY = [0, 0, 1, -1]; // Movement directions for columns
-const solvedPuzzle = [[1, 2, 3], [4, 5, 6], [7, 0, 8]]; // Target solved state
+const solvedPuzzle = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]; // Target solved state
 
 // Hash function for puzzle state
 function hashPuzzle(puzzle) {
@@ -22,7 +22,7 @@ function isSolved(currentPuzzle) {
     return hashPuzzle(currentPuzzle) === hashPuzzle(solvedPuzzle);
 }
 
-// Generate neighboring states and track the move made
+// Generate neighboring states with in-place swap to avoid deep copy
 function generateNeighbors(currentPuzzle, emptyTilePos) {
     const neighbors = [];
     const [emptyRow, emptyCol] = emptyTilePos;
@@ -32,50 +32,79 @@ function generateNeighbors(currentPuzzle, emptyTilePos) {
         const newY = emptyCol + directionsY[i];
 
         if (newX >= 0 && newX < 3 && newY >= 0 && newY < 3) {
-            const newPuzzle = currentPuzzle.map(row => row.slice()); // Deep copy of the puzzle
-            // Swap the empty tile (0) with the neighbor
-            [newPuzzle[emptyRow][emptyCol], newPuzzle[newX][newY]] = [newPuzzle[newX][newY], newPuzzle[emptyRow][emptyCol]];
-            neighbors.push({ puzzle: newPuzzle, move: [newY, newX], newEmptyPos: [newX, newY] });
+            // In-place swap the empty tile (0) with the neighbor
+            [currentPuzzle[emptyRow][emptyCol], currentPuzzle[newX][newY]] = 
+                [currentPuzzle[newX][newY], currentPuzzle[emptyRow][emptyCol]];
+            
+            neighbors.push({ 
+                puzzle: currentPuzzle.map(row => row.slice()), // Save a copy for the neighbor
+                move: [newX, newY], 
+                newEmptyPos: [newX, newY] 
+            });
+
+            // Undo the swap for the next iteration
+            [currentPuzzle[emptyRow][emptyCol], currentPuzzle[newX][newY]] = 
+                [currentPuzzle[newX][newY], currentPuzzle[emptyRow][emptyCol]];
         }
     }
 
     return neighbors;
 }
 
-// BFS function to solve the puzzle
-function solvePuzzle(initialPuzzle, initialEmptyPos) {
-    const queue = [];
-    const visited = new Set();
+// Bidirectional BFS to solve the puzzle
+function bidirectionalSolve(initialPuzzle, initialEmptyPos) {
+    const queueStart = [];
+    const queueEnd = [];
+    const visitedStart = new Map();
+    const visitedEnd = new Map();
     
     const initialHash = hashPuzzle(initialPuzzle);
-    queue.push({ puzzle: initialPuzzle, emptyPos: initialEmptyPos, path: [] });
-    visited.add(initialHash);
+    const solvedHash = hashPuzzle(solvedPuzzle);
+    
+    queueStart.push({ puzzle: initialPuzzle, emptyPos: initialEmptyPos, path: [] });
+    queueEnd.push({ puzzle: solvedPuzzle, emptyPos: [2, 2], path: [] });
+    
+    visitedStart.set(initialHash, []);
+    visitedEnd.set(solvedHash, []);
 
-    while (queue.length > 0) {
-        const { puzzle: currentPuzzle, emptyPos: currentEmptyPos, path: currentPath } = queue.shift();
+    while (queueStart.length > 0 && queueEnd.length > 0) {
+        // Expand from the start
+        const result = expandBFS(queueStart, visitedStart, visitedEnd, true);
+        if (result) return { solved: true, moves: result };
 
-        // Check if the puzzle is solved
-        if (isSolved(currentPuzzle)) {
-            return { solved: true, moves: currentPath };
-        }
-
-        // Generate neighboring states
-        const neighbors = generateNeighbors(currentPuzzle, currentEmptyPos);
-
-        for (const neighbor of neighbors) {
-            const neighborHash = hashPuzzle(neighbor.puzzle);
-            if (!visited.has(neighborHash)) {
-                visited.add(neighborHash);
-                queue.push({
-                    puzzle: neighbor.puzzle,
-                    emptyPos: neighbor.newEmptyPos,
-                    path: [...currentPath, neighbor.move] // Append new move to path
-                });
-            }
-        }
+        // Expand from the end
+        const reverseResult = expandBFS(queueEnd, visitedEnd, visitedStart, false);
+        if (reverseResult) return { solved: true, moves: reverseResult };
     }
 
     return { solved: false, moves: [] };
+}
+
+// BFS expansion function for bidirectional search
+function expandBFS(queue, visitedCurrent, visitedOther, isForward) {
+    const { puzzle: currentPuzzle, emptyPos: currentEmptyPos, path: currentPath } = queue.shift();
+
+    // Generate neighbors
+    const neighbors = generateNeighbors(currentPuzzle, currentEmptyPos);
+
+    for (const neighbor of neighbors) {
+        const neighborHash = hashPuzzle(neighbor.puzzle);
+        if (!visitedCurrent.has(neighborHash)) {
+            visitedCurrent.set(neighborHash, [...currentPath, neighbor.move]);
+
+            if (visitedOther.has(neighborHash)) {
+                const otherPath = visitedOther.get(neighborHash);
+                return isForward ? [...currentPath, neighbor.move, ...otherPath.reverse()] : [...otherPath.reverse(), ...currentPath, neighbor.move];
+            }
+
+            queue.push({
+                puzzle: neighbor.puzzle,
+                emptyPos: neighbor.newEmptyPos,
+                path: [...currentPath, neighbor.move]
+            });
+        }
+    }
+    return null;
 }
 
 // Find the empty tile (0) in the puzzle
@@ -103,7 +132,7 @@ app.post('/solve-puzzle', (req, res) => {
     const initialEmptyPos = findEmptyTile(initialPuzzle);
 
     // Solve the puzzle
-    const result = solvePuzzle(initialPuzzle, initialEmptyPos);
+    const result = bidirectionalSolve(initialPuzzle, initialEmptyPos);
 
     // Return the result as a response
     if (result.solved) {
