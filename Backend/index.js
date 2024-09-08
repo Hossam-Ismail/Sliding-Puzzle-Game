@@ -38,7 +38,7 @@ function generateNeighbors(currentPuzzle, emptyTilePos) {
             
             neighbors.push({ 
                 puzzle: currentPuzzle.map(row => row.slice()), // Save a copy for the neighbor
-                move: [newy, newx], 
+                move: [newY, newX], 
                 newEmptyPos: [newX, newY] 
             });
 
