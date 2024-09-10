@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const heap = require('heap'); // Import a priority queue library
+const PriorityQueue = require('priorityqueuejs'); // Import a priority queue library
 
 const app = express();
 const port = 5000;
@@ -58,7 +58,7 @@ function generateNeighbors(currentPuzzle, emptyTilePos) {
 
 // A* function to solve the puzzle
 function solvePuzzle(initialPuzzle) {
-    const openList = new heap((a, b) => a.f - b.f); // Priority queue for open list
+    const openList = new PriorityQueue((a, b) => a.f - b.f); // Priority queue for open list
     const closedSet = new Set(); // Set to track visited states
 
     const initialState = {
@@ -70,12 +70,12 @@ function solvePuzzle(initialPuzzle) {
         parent: null
     };
 
-    openList.push(initialState);
+    openList.enq(initialState);
     previousState.set(JSON.stringify(initialPuzzle), null);
     moveFromPrevious.set(JSON.stringify(initialPuzzle), []);
 
-    while (!openList.empty()) {
-        const currentNode = openList.pop();
+    while (!openList.isEmpty()) {
+        const currentNode = openList.deq();
 
         // Check if the puzzle is solved
         if (isSolved(currentNode.puzzle)) {
@@ -106,7 +106,7 @@ function solvePuzzle(initialPuzzle) {
                 const f = g + h;
 
                 if (!previousState.has(neighborStr) || g < previousState.get(neighborStr).g) {
-                    openList.push({ ...neighbor, g, h, f, parent: currentNode });
+                    openList.enq({ ...neighbor, g, h, f, parent: currentNode });
                     previousState.set(neighborStr, currentNode.puzzle);
                     moveFromPrevious.set(neighborStr, neighbor.move); // Store the move that led to this state
                 }
@@ -146,10 +146,7 @@ app.post('/solve-puzzle', (req, res) => {
 
     // Return the result as a response
     if (result.solved) {
-        res.json({
-            message: 'Puzzle solved!',
-            moves: result.moves.map(move => ({ row: move[0], col: move[1] })) // Convert move coordinates to { row, col }
-        });
+        res.json({ message: 'Puzzle solved!', moves: result.moves });
     } else {
         res.json({ message: 'No solution found.' });
     }
