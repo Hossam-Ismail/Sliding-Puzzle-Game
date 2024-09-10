@@ -1,12 +1,16 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const PriorityQueue = require('priorityqueuejs'); // Import a priority queue library
 
 const app = express();
 const port = 5000;
 
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+    origin: 'https://slider-puzzle-game.vercel.app', // Allow your frontend URL
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
+}));
+
 app.use(bodyParser.json());
 
 const directionsX = [1, -1, 0, 0]; // Movement directions for rows
