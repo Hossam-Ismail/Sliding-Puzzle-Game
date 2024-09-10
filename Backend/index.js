@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const heap = require('heap'); // Import a priority queue library
 
 const app = express();
 const port = 5000;
@@ -20,6 +21,22 @@ function isSolved(currentPuzzle) {
     return JSON.stringify(currentPuzzle) === JSON.stringify(solvedPuzzle);
 }
 
+// Calculate the Manhattan Distance heuristic
+function heuristic(puzzle) {
+    let h = 0;
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            const value = puzzle[i][j];
+            if (value !== 0) {
+                const targetRow = Math.floor((value - 1) / 3);
+                const targetCol = (value - 1) % 3;
+                h += Math.abs(targetRow - i) + Math.abs(targetCol - j);
+            }
+        }
+    }
+    return h;
+}
+
 // Generate neighboring states and track the move made
 function generateNeighbors(currentPuzzle, emptyTilePos) {
     const neighbors = [];
@@ -32,61 +49,83 @@ function generateNeighbors(currentPuzzle, emptyTilePos) {
             const newPuzzle = JSON.parse(JSON.stringify(currentPuzzle)); // Deep copy the current puzzle
             // Swap the empty tile (0) with the neighbor
             [newPuzzle[emptyTilePos[0]][emptyTilePos[1]], newPuzzle[newX][newY]] = [newPuzzle[newX][newY], newPuzzle[emptyTilePos[0]][emptyTilePos[1]]];
-            neighbors.push({ puzzle: newPuzzle, move: [newY, newX] }); // Store the index of the moved tile
+            neighbors.push({ puzzle: newPuzzle, move: [newX, newY] }); // Store the position of the moved tile
         }
     }
 
     return neighbors;
 }
 
-// BFS function to solve the puzzle
+// A* function to solve the puzzle
 function solvePuzzle(initialPuzzle) {
-    const queue = [];
-    queue.push(initialPuzzle);
-    previousState.set(initialPuzzle.toString(), null);
-    moveFromPrevious.set(initialPuzzle.toString(), []);
+    const openList = new heap((a, b) => a.f - b.f); // Priority queue for open list
+    const closedSet = new Set(); // Set to track visited states
 
-    while (queue.length > 0) {
-        const currentPuzzle = queue.shift();
+    const initialState = {
+        puzzle: initialPuzzle,
+        g: 0, // Cost to reach this node
+        h: heuristic(initialPuzzle), // Heuristic cost
+        f: heuristic(initialPuzzle), // Total cost (g + h)
+        emptyTilePos: findEmptyTilePos(initialPuzzle),
+        parent: null
+    };
+
+    openList.push(initialState);
+    previousState.set(JSON.stringify(initialPuzzle), null);
+    moveFromPrevious.set(JSON.stringify(initialPuzzle), []);
+
+    while (!openList.empty()) {
+        const currentNode = openList.pop();
 
         // Check if the puzzle is solved
-        if (isSolved(currentPuzzle)) {
+        if (isSolved(currentNode.puzzle)) {
             // Reconstruct the path
             const moves = [];
-            let currentState = currentPuzzle.toString();
+            let currentState = JSON.stringify(currentNode.puzzle);
 
-            while (currentState !== initialPuzzle.toString()) {
+            while (currentState !== JSON.stringify(initialPuzzle)) {
                 moves.push(moveFromPrevious.get(currentState));
-                currentState = previousState.get(currentState).toString();
+                currentState = JSON.stringify(previousState.get(currentState));
             }
 
             return { solved: true, moves: moves.reverse() };
         }
 
-        // Find the position of the empty tile (0)
-        let emptyTilePos;
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                if (currentPuzzle[i][j] === 0) {
-                    emptyTilePos = [i, j];
-                }
-            }
-        }
+        // Add to closed set
+        closedSet.add(JSON.stringify(currentNode.puzzle));
 
         // Generate neighboring states
-        const neighbors = generateNeighbors(currentPuzzle, emptyTilePos);
+        const neighbors = generateNeighbors(currentNode.puzzle, currentNode.emptyTilePos);
 
         for (const neighbor of neighbors) {
-            const neighborStr = neighbor.puzzle.toString();
-            if (!previousState.has(neighborStr)) {
-                queue.push(neighbor.puzzle);
-                previousState.set(neighborStr, currentPuzzle);
-                moveFromPrevious.set(neighborStr, neighbor.move); // Store the move that led to this state
+            const neighborStr = JSON.stringify(neighbor.puzzle);
+
+            if (!closedSet.has(neighborStr)) {
+                const g = currentNode.g + 1;
+                const h = heuristic(neighbor.puzzle);
+                const f = g + h;
+
+                if (!previousState.has(neighborStr) || g < previousState.get(neighborStr).g) {
+                    openList.push({ ...neighbor, g, h, f, parent: currentNode });
+                    previousState.set(neighborStr, currentNode.puzzle);
+                    moveFromPrevious.set(neighborStr, neighbor.move); // Store the move that led to this state
+                }
             }
         }
     }
 
     return { solved: false, moves: [] };
+}
+
+// Helper function to find the position of the empty tile (0)
+function findEmptyTilePos(puzzle) {
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            if (puzzle[i][j] === 0) {
+                return [i, j];
+            }
+        }
+    }
 }
 
 // POST API to receive puzzle input and solve it
