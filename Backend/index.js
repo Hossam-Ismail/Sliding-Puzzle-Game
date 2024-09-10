@@ -146,7 +146,10 @@ app.post('/solve-puzzle', (req, res) => {
 
     // Return the result as a response
     if (result.solved) {
-        res.json({ message: 'Puzzle solved!', moves: result.moves });
+        res.json({
+            message: 'Puzzle solved!',
+            moves: result.moves.map(move => ({ row: move[0], col: move[1] })) // Convert move coordinates to { row, col }
+        });
     } else {
         res.json({ message: 'No solution found.' });
     }
