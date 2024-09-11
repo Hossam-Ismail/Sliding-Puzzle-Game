@@ -1,11 +1,11 @@
 # Sliding Puzzle Game
 
-Experience the classic sliding puzzle game built with **ReactJS**, featuring limited moves and an automatic solver powered by a **Node.js** backend using the **Breadth-First Search (BFS)** algorithm.
+Experience the classic sliding puzzle game built with **ReactJS**, featuring limited moves and an automatic solver powered by a **Node.js** backend using the **A Star** algorithm.
 
 ## Features
 
 - **Challenging Gameplay**: Solve the sliding puzzle within a set number of moves.
-- **Automatic Solver**: Click the "Solve" button to see the puzzle solved instantly using BFS.
+- **Automatic Solver**: Click the "Solve" button to see the puzzle solved instantly using A* algorithm.
 - **Intuitive Interface**: Enjoy a smooth and responsive user experience.
 
 ## Demo
@@ -73,13 +73,13 @@ npm start
 
 - **Objective:** Arrange the puzzle pieces in the correct order within the limited number of moves.
 - **Controls:** Click or tap on the tiles adjacent to the empty space to slide them.
-- **Solve Button:** Stuck? Click on the "Solve" button to let the BFS algorithm solve the puzzle instantly.
+- **Solve Button:** Stuck? Click on the "Solve" button to let the A* algorithm solve the puzzle instantly.
 
 ### Technology Stack
 
 - **Frontend:** React
 - **Backend:** Node.js, Express.js
-- **Algorithm:** Breadth-First Search (BFS)
+- **Algorithm:** A-Star (A*)
 
 ## Contributing
 
