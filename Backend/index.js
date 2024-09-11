@@ -107,7 +107,7 @@ function solvePuzzleAStar(initialPuzzle) {
                     };
                     openList.push(neighborNode);
                     previousState.set(newPuzzle.toString(), current);
-                    moveFromPrevious.set(newPuzzle.toString(), [newRow, newCol]);
+                    moveFromPrevious.set(newPuzzle.toString(), [newCol, newRow]);
                 }
             }
         }
